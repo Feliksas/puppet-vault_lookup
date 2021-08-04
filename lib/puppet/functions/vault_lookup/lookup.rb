@@ -52,6 +52,14 @@ Puppet::Functions.create_function(:'vault_lookup::lookup') do
     certname = Puppet[:certname]
 
     capem = Puppet::FileSystem.read(Puppet[:localcacert], encoding: 'UTF-8')
+    if File.exist?('/etc/ssl/certs/ca-certificates.crt')
+      capem += Puppet::FileSystem.read('/etc/ssl/certs/ca-certificates.crt', encoding: 'UTF-8')
+    end
+
+    if File.exist?('/etc/pki/tls/cert.pem')
+      capem += Puppet::FileSystem.read('/etc/pki/tls/cert.pem', encoding: 'UTF-8')
+    end
+
     cacerts = capem.scan(CERT_DELIMITERS).map do |text|
       OpenSSL::X509::Certificate.new(text)
     end
@@ -75,7 +83,7 @@ Puppet::Functions.create_function(:'vault_lookup::lookup') do
 
     store = OpenSSL::X509::Store.new
     store.purpose = OpenSSL::X509::PURPOSE_ANY
-    store.flags = OpenSSL::X509::V_FLAG_CHECK_SS_SIGNATURE | OpenSSL::X509::V_FLAG_CRL_CHECK | OpenSSL::X509::V_FLAG_CRL_CHECK_ALL
+    store.flags = OpenSSL::X509::V_FLAG_CHECK_SS_SIGNATURE
 
     cacerts.each { |cert| store.add_cert(cert) }
     crls.each { |crl| store.add_crl(crl) }
